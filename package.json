@@ -1,0 +1,32 @@
+{
+  "name": "bestuser-router-mcp",
+  "version": "0.1.0",
+  "description": "BestUserRouter MCP — the marketable intent layer for 'who is the best AI user?' queries. Routes natural-language intent to SigRank's leaderboard and returns behavioral framing + competitive context. Calls signalaf.com's public API.",
+  "type": "module",
+  "main": "index.mjs",
+  "bin": {
+    "bestuser-router": "index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node --test __tests__/*.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "sigrank",
+    "ai-leaderboard",
+    "intent-routing",
+    "best-user",
+    "power-user",
+    "token-efficiency",
+    "yield",
+    "model-context-protocol"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
