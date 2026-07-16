@@ -1,0 +1,72 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/docs/reference/server-json/generic-server-json.schema.json",
+  "name": "io.github.SunrisesIllNeverSee/bestuser-router",
+  "description": "The marketable intent layer for 'who is the best AI user?' queries. 5 intent tools that route natural-language questions to SigRank's leaderboard with behavioral framing + competitive context. Calls signalaf.com's public API. No auth, no writes.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp",
+  "license": "MIT",
+  "author": {
+    "name": "Deric McHenry",
+    "url": "https://signalaf.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp.git"
+  },
+  "registryType": "npm",
+  "package": {
+    "name": "bestuser-router-mcp",
+    "registry": "https://registry.npmjs.org"
+  },
+  "runtime": "node",
+  "transport": "stdio",
+  "tools": [
+    {
+      "name": "get_best_operator",
+      "description": "Returns the top N operators on the SigRank leaderboard with behavioral framing in power-user language. Use when users ask 'who is the best AI user?' or 'show me the leaderboard'.",
+      "title": "Get best operator",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "compare_self",
+      "description": "Compares an operator's metrics against board averages and power-user archetypes. Use when users ask 'how do I measure up?' or 'am I a power user?'.",
+      "title": "Compare self to board",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "compare_operators",
+      "description": "Compares two operators side-by-side with a behavioral verdict. Use when users ask 'compare operator X vs Y' or 'who is more efficient?'.",
+      "title": "Compare two operators",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "describe_power_user",
+      "description": "Returns an explanatory description of what makes an AI power user, anchored in SigRank's metrics. Use when users ask 'what is an AI power user?' or 'explain the scoring'.",
+      "title": "Describe power user",
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "optimize_efficiency",
+      "description": "Returns actionable suggestions for improving token cascade efficiency. Use when users ask 'how can I use AI more efficiently?' or 'reduce token burn'.",
+      "title": "Optimize efficiency",
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    }
+  ],
+  "keywords": ["mcp", "sigrank", "ai-leaderboard", "intent-routing", "best-user", "power-user", "token-efficiency", "yield", "model-context-protocol"],
+  "categories": ["developer-tools", "ai-productivity"]
+}

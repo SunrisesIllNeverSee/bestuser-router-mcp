@@ -1,0 +1,62 @@
+{
+  "mcpb_version": "0.1",
+  "name": "bestuser-router",
+  "version": "0.1.0",
+  "description": "The marketable intent layer for 'who is the best AI user?' queries. 5 intent tools that route natural-language questions to SigRank's leaderboard with behavioral framing + competitive context.",
+  "author": {
+    "name": "Deric McHenry",
+    "url": "https://signalaf.com"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/index.mjs"],
+      "env": {
+        "SIGRANK_API_BASE": {
+          "description": "SigRank API base URL (default: https://signalaf.com)",
+          "value": "https://signalaf.com",
+          "required": false
+        }
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "get_best_operator",
+      "description": "Returns the top N operators on the SigRank leaderboard with behavioral framing in power-user language. Use when users ask 'who is the best AI user?' or 'show me the leaderboard'.",
+      "title": "Get best operator"
+    },
+    {
+      "name": "compare_self",
+      "description": "Compares an operator's metrics against board averages and power-user archetypes. Use when users ask 'how do I measure up?' or 'am I a power user?'.",
+      "title": "Compare self to board"
+    },
+    {
+      "name": "compare_operators",
+      "description": "Compares two operators side-by-side with a behavioral verdict. Use when users ask 'compare operator X vs Y' or 'who is more efficient?'.",
+      "title": "Compare two operators"
+    },
+    {
+      "name": "describe_power_user",
+      "description": "Returns an explanatory description of what makes an AI power user, anchored in SigRank's metrics. Use when users ask 'what is an AI power user?' or 'explain the scoring'.",
+      "title": "Describe power user"
+    },
+    {
+      "name": "optimize_efficiency",
+      "description": "Returns actionable suggestions for improving token cascade efficiency. Use when users ask 'how can I use AI more efficiently?' or 'reduce token burn'.",
+      "title": "Optimize efficiency"
+    }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"],
+    "runtimes": {
+      "node": ">=18"
+    }
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp",
+  "privacy_policy": "https://signalaf.com/privacy",
+  "keywords": ["mcp", "sigrank", "ai-leaderboard", "intent-routing", "best-user", "power-user", "token-efficiency"]
+}
