@@ -1,0 +1,7 @@
+__tests__/
+eval/
+node_modules/
+*.log
+.DS_Store
+.env
+.git/

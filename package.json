@@ -23,6 +23,15 @@
     "model-context-protocol"
   ],
   "license": "MIT",
+  "author": "Deric McHenry (@burnmydays)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp.git"
+  },
+  "homepage": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
