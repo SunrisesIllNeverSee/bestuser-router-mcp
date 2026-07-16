@@ -5,3 +5,9 @@ node_modules/
 .DS_Store
 .env
 .git/
+*.mcpb
+DIRECTORY_SUBMISSION_CHECKLIST.md
+MCP_SERVER_DESCRIPTION.md
+manifest.json
+server.json
+glama.json

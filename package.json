@@ -1,6 +1,6 @@
 {
   "name": "bestuser-router-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "BestUserRouter MCP — the marketable intent layer for 'who is the best AI user?' queries. Routes natural-language intent to SigRank's leaderboard and returns behavioral framing + competitive context. Calls signalaf.com's public API.",
   "mcpName": "io.github.SunrisesIllNeverSee/bestuser-router",
   "type": "module",
