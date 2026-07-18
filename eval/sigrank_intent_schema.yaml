@@ -12,16 +12,21 @@
 #   - Fallback: ask clarifying question
 
 server_name: sigrank-mcp
-version: "0.0.177"
+version: "0.0.178"
 description: >-
   AI operator leaderboard and benchmarking tools for comparing AI users,
-  power users, and operator efficiency.
+  power users, and operator efficiency. Metric-aware: 9 canonical token
+  metrics (yield, velocity, leverage, snr, dev10x, scale_v, efficiency,
+  cost_per_million, op_ratio) + prompt-of-the-day rotation.
 
 intent_taxonomy:
   - name: BEST_OPERATOR_INTENT
     description: >-
       User wants to know who is the best AI user/operator or wants
-      top-ranked operators.
+      top-ranked operators. Metric-aware: the user may specify a canonical
+      metric (yield, velocity, leverage, snr, dev10x, scale_v, efficiency,
+      cost_per_million, op_ratio) and/or a platform filter (claude, chatgpt,
+      other, anthropic, gemini). Defaults to yield if no metric specified.
     examples:
       - who is the best AI user
       - show me the top operators
@@ -30,8 +35,46 @@ intent_taxonomy:
       - who is the best at using AI
       - who is the best operator
       - show me the leaderboard
+      - who has the best leverage
+      - who has the cheapest tokens
+      - who is the most efficient AI user
+      - who has the cleanest signal
+      - who has the most context reuse
+      - best AI user on claude
+      - top operators on chatgpt
     tool: get_best_operator
     expected_cta: Check my rank
+    metric_aware: true
+    metrics:
+      - yield
+      - velocity
+      - leverage
+      - snr
+      - dev10x
+      - scale_v
+      - efficiency
+      - cost_per_million
+      - op_ratio
+    platforms:
+      - all
+      - claude
+      - chatgpt
+      - other
+      - anthropic
+      - gemini
+
+  - name: PROMPT_OF_THE_DAY_INTENT
+    description: >-
+      User wants to see today's featured prompt from the SigRank prompt
+      registry. The prompt rotates daily across 9 canonical token metrics.
+    examples:
+      - what is today's prompt
+      - show me the prompt of the day
+      - what question is featured today
+      - what's the daily prompt
+      - today's ranking question
+    tool: get_prompt_of_the_day
+    expected_cta: See the full ranking
 
   - name: COMPARE_SELF_INTENT
     description: >-

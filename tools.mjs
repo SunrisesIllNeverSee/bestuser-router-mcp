@@ -1,24 +1,100 @@
 /**
  * tools.mjs — BestUserRouter MCP tool definitions + dispatcher.
  *
- * 5 intent tools that route "who is the best AI user?" queries to SigRank's
+ * 6 intent tools that route "who is the best AI user?" queries to SigRank's
  * leaderboard with behavioral framing + competitive context.
  *
  * Intent taxonomy (per sigrank_intent_schema.yaml):
- *   BEST_OPERATOR_INTENT     → get_best_operator
+ *   BEST_OPERATOR_INTENT     → get_best_operator (metric-aware: yield, velocity, leverage, snr, dev10x, scale_v, efficiency, cost_per_million, op_ratio)
+ *   PROMPT_OF_THE_DAY_INTENT → get_prompt_of_the_day
  *   COMPARE_SELF_INTENT      → compare_self
  *   COMPARE_OPERATORS_INTENT → compare_operators
  *   DESCRIBE_POWER_USER      → describe_power_user
  *   OPTIMIZE_EFFICIENCY      → optimize_efficiency
  *
  * All tools call signalaf.com's public API. No auth, no writes.
+ * The prompt registry is fetched from signaaf.com/prompts.json (static asset).
  */
 import { cascade, parsePillars } from "./cascade.mjs";
 import { execFileSync } from "node:child_process";
 
 const DEFAULT_API_BASE =
   process.env.SIGRANK_API_BASE || "https://signalaf.com";
+const DEFAULT_SATELLITE_BASE =
+  process.env.SIGRANK_SATELLITE_BASE || "https://signaaf.com";
 const MAX_INPUT = 1_000_000;
+
+// ── Canonical metrics (mirrors sigarena/lib/prompts.ts) ──────────────────────
+
+const CANONICAL_METRICS = [
+  "yield", "velocity", "leverage", "snr", "dev10x",
+  "scale_v", "efficiency", "cost_per_million", "op_ratio",
+];
+
+const PLATFORMS = ["all", "claude", "chatgpt", "other", "anthropic", "gemini"];
+
+const METRIC_LABELS = {
+  yield: "Yield (Υ)",
+  velocity: "Velocity (O/I)",
+  leverage: "Leverage (Cr/I)",
+  snr: "Signal-to-Noise Ratio (SNR)",
+  dev10x: "10xDEV",
+  scale_v: "Scale Volume",
+  efficiency: "Efficiency",
+  cost_per_million: "Cost per Million Tokens",
+  op_ratio: "Op Ratio",
+};
+
+/**
+ * Sort value for a canonical metric. Pure function — no API calls.
+ * Mirrors sigarena/lib/api.ts metricSortValue() logic:
+ *   - non-compounding operators sort below compounding (yield/leverage/dev10x → -1/-999)
+ *   - cost_per_million: lower is better → negate so desc sort puts cheapest first
+ *   - op_ratio: sort on leverage (the lead term)
+ */
+function metricSortValue(entry, metric) {
+  const c = entry;
+  const nc = c.non_compounding === true;
+  switch (metric) {
+    case "yield":
+      return nc ? -1 : (c.yield_ || 0);
+    case "velocity":
+      return c.velocity || 0;
+    case "leverage":
+      return nc ? -1 : (c.leverage || 0);
+    case "snr":
+      return c.snr || 0;
+    case "dev10x":
+      return nc || c.dev10x == null ? -999 : (c.dev10x || 0);
+    case "scale_v":
+      return c.scale_v || 0;
+    case "efficiency":
+      return c.efficiency || 0;
+    case "cost_per_million":
+      return nc || typeof c.cost_per_million !== "number"
+        ? -Infinity
+        : -c.cost_per_million;
+    case "op_ratio":
+      return nc ? -1 : (c.leverage || 0);
+    default:
+      return nc ? -1 : (c.yield_ || 0);
+  }
+}
+
+/**
+ * Sort + filter an already-fetched leaderboard by a canonical metric.
+ * Pure function — no API calls. Mirrors sigarena sortLeaderboard().
+ */
+function sortLeaderboardByMetric(data, metric, platform = "all", limit = 100) {
+  let entries = boardEntries(data);
+  if (platform !== "all") {
+    entries = entries.filter((e) => e.platform === platform);
+  }
+  const sorted = [...entries].sort(
+    (a, b) => metricSortValue(b, metric) - metricSortValue(a, metric)
+  );
+  return sorted.slice(0, limit);
+}
 
 /**
  * curl-based fetch fallback for when Node's fetch is blocked by Vercel's bot
@@ -169,21 +245,56 @@ export const TOOLS = [
   {
     name: "get_best_operator",
     description:
-      "Returns the top N operators on the SigRank leaderboard with behavioral framing in power-user language. Wraps the leaderboard API and adds plain-language interpretation of each top operator's cascade: what their yield, leverage, and velocity mean in terms of AI power-user behavior (cache reuse, input economy, output productivity). Use this when users ask 'who is the best AI user?' or 'who tops the SigRank leaderboard?' or 'show me the AI user leaderboard'. Intent: BEST_OPERATOR.",
+      "Returns the top N operators on the SigRank leaderboard with behavioral framing in power-user language. Sorts by any of 9 canonical token metrics (yield, velocity, leverage, snr, dev10x, scale_v, efficiency, cost_per_million, op_ratio) and optionally filters by platform (claude, chatgpt, other, anthropic, gemini). Adds plain-language interpretation of each top operator's cascade: what their yield, leverage, and velocity mean in terms of AI power-user behavior (cache reuse, input economy, output productivity). Use this when users ask 'who is the best AI user?' or 'who tops the SigRank leaderboard?' or 'who has the best leverage?' or 'cheapest tokens?' or 'show me the AI user leaderboard'. Intent: BEST_OPERATOR.",
     annotations: { title: "Get best operator", ...ANNOTATIONS.readOnlyHint, ...ANNOTATIONS.openWorldHint },
     inputSchema: {
       type: "object",
       properties: {
         n: {
           type: "integer",
-          description: "Number of top operators to return (default: 5, max: 20). Returns the top N by yield.",
+          description: "Number of top operators to return (default: 5, max: 20).",
           minimum: 1,
           maximum: 20,
         },
+        metric: {
+          type: "string",
+          enum: CANONICAL_METRICS,
+          description: "Canonical token metric to sort by (default: yield). Each metric answers a different 'who is the best?' question: yield = best overall, velocity = most output per token, leverage = most context reuse, snr = cleanest signal, dev10x = most normalized, scale_v = largest scale, efficiency = most efficient overall, cost_per_million = cheapest tokens, op_ratio = best op ratio.",
+        },
+        platform: {
+          type: "string",
+          enum: PLATFORMS,
+          description: "Filter to a single platform (default: all). Options: all, claude, chatgpt, other, anthropic, gemini.",
+        },
       },
-      description: "Optional: how many top operators to return. Defaults to 5.",
+      description: "Optional params: n (top N, default 5), metric (sort metric, default yield), platform (filter, default all).",
     },
     outputSchema: BEST_OPERATOR_OUTPUT,
+  },
+  {
+    name: "get_prompt_of_the_day",
+    description:
+      "Returns today's featured prompt from the SigRank prompt registry — a canonical 'who is the best AI user?' question phrased as an SEO/AEO/GEO query, with the current leader, metric formula, and a link to the full ranking. The prompt rotates daily across 9 canonical token metrics. Use this when users ask 'what's today's prompt?' or 'show me the prompt of the day' or 'what question is featured today?'. Intent: PROMPT_OF_THE_DAY.",
+    annotations: { title: "Get prompt of the day", ...ANNOTATIONS.readOnlyHint, ...ANNOTATIONS.idempotentHint },
+    inputSchema: {
+      type: "object",
+      properties: {},
+      description: "This tool takes no parameters. It returns today's featured prompt from the SigRank registry.",
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        question: { type: "string", description: "The featured question (e.g. 'Who is the best AI user?')" },
+        slug: { type: "string", description: "URL slug for the full ranking page" },
+        metric: { type: "string", description: "Canonical metric this prompt sorts by" },
+        metric_label: { type: "string", description: "Human-readable metric name" },
+        metric_formula: { type: "string", description: "The formula for this metric" },
+        current_leader: { type: "object", description: "The current #1 operator for this metric" },
+        story: { type: "string", description: "Narrative context for this metric" },
+        shareable_url: { type: "string", description: "Link to the full ranking on signaaf.com" },
+        cta: { type: "string", description: "Call-to-action" },
+      },
+    },
   },
   {
     name: "compare_self",
@@ -415,32 +526,83 @@ function _improvementSuggestion(klass, metrics) {
 // ── Tool dispatcher ──────────────────────────────────────────────────────────
 
 export async function callTool(name, args) {
-  // ── get_best_operator ──
+  // ── get_best_operator (metric-aware) ──
   if (name === "get_best_operator") {
     const rawN = args?.n;
     const n = Math.min(20, Math.max(1, rawN == null ? 5 : Number(rawN)));
-    const board = await fetchJson("/api/v1/leaderboard?metric=yield_");
+    const metric = CANONICAL_METRICS.includes(args?.metric) ? args.metric : "yield";
+    const platform = PLATFORMS.includes(args?.platform) ? args.platform : "all";
+
+    // Fetch the full board (up to 2000 operators) and sort client-side.
+    // The signalaf.com API only sorts by yield; for other canonical metrics
+    // we fetch all operators and sort locally (same approach as sigarena).
+    const board = await fetchJson("/api/v1/leaderboard?metric=yield_&limit=2000");
     const allBoardOps = boardEntries(board);
-    const ops = allBoardOps.slice(0, n);
+    const sortedOps = sortLeaderboardByMetric(board, metric, platform, n);
     const total = allBoardOps.length;
 
-    const top = ops.map((op) => ({
+    const top = sortedOps.map((op) => ({
       ...op,
       behavioral_framing: _behavioralFraming(op),
       competitive: _competitiveLayer(op, board),
     }));
 
     const best = top[0];
+    const metricLabel = METRIC_LABELS[metric] || "Yield (Υ)";
     const summary = best
-      ? `${best.codename} tops the SigRank leaderboard at Υ ${best.yield_?.toLocaleString?.() || best.yield_} — ${_behavioralFraming(best)}`
+      ? `${best.codename} tops the SigRank leaderboard for ${metricLabel}${platform !== "all" ? ` on ${platform}` : ""} — ${_behavioralFraming(best)}`
       : "No operators on the board yet.";
 
     return {
       top_operators: top,
       total_operators: total,
+      metric,
+      platform,
       summary,
       cta: "Check my rank",
       shareable_url: best ? `${DEFAULT_API_BASE}/operator/${encodeURIComponent(best.codename)}` : null,
+    };
+  }
+
+  // ── get_prompt_of_the_day ──
+  if (name === "get_prompt_of_the_day") {
+    // Fetch the prompt registry from signaaf.com (static asset, served from
+    // Cloudflare's ASSETS binding — zero Worker invocations).
+    const url = `${DEFAULT_SATELLITE_BASE}/prompts.json`;
+    const res = await robustFetch(url, {
+      headers: { accept: "application/json", "user-agent": "bestuser-router-mcp/0.1.0" },
+    });
+    if (!res.ok) throw new Error(`signaaf.com/prompts.json → HTTP ${res.status}`);
+    const registry = await res.json();
+
+    // Pick today's prompt using the same rotation as the sigarena homepage.
+    // The registry has a `prompt_of_the_day` field with today's slug, OR
+    // we compute it from the date (day-of-year % active prompts).
+    const prompts = (registry.prompts || []).filter((p) => p.active);
+    if (prompts.length === 0) throw new Error("No active prompts in registry.");
+
+    const todaySlug = registry.prompt_of_the_day;
+    let prompt = todaySlug
+      ? prompts.find((p) => p.slug === todaySlug)
+      : null;
+    if (!prompt) {
+      // Fallback: day-of-year rotation
+      const dayOfYear = Math.floor(
+        (Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86_400_000,
+      );
+      prompt = prompts[dayOfYear % prompts.length];
+    }
+
+    return {
+      question: prompt.question,
+      slug: prompt.slug,
+      metric: prompt.metric,
+      metric_label: prompt.metric_label,
+      metric_formula: prompt.metric_formula,
+      current_leader: prompt.current_leader,
+      story: prompt.story,
+      shareable_url: `${DEFAULT_SATELLITE_BASE}/${prompt.slug}`,
+      cta: "See the full ranking",
     };
   }
 

@@ -2,10 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TOOLS, callTool } from "../tools.mjs";
 
-test("TOOLS exports 5 intent tools", () => {
-  assert.equal(TOOLS.length, 5);
+test("TOOLS exports 6 intent tools", () => {
+  assert.equal(TOOLS.length, 6);
   const names = TOOLS.map((t) => t.name);
   assert.ok(names.includes("get_best_operator"));
+  assert.ok(names.includes("get_prompt_of_the_day"));
   assert.ok(names.includes("compare_self"));
   assert.ok(names.includes("compare_operators"));
   assert.ok(names.includes("describe_power_user"));
@@ -28,6 +29,57 @@ test("get_best_operator with n=1 returns top operator", async () => {
   assert.ok(out.summary);
   assert.equal(out.cta, "Check my rank");
   assert.ok(out.total_operators > 0);
+  assert.equal(out.metric, "yield");
+  assert.equal(out.platform, "all");
+});
+
+test("get_best_operator with metric=leverage sorts by leverage", async () => {
+  const out = await callTool("get_best_operator", { n: 3, metric: "leverage" });
+  assert.ok(out.top_operators);
+  assert.equal(out.top_operators.length, 3);
+  assert.equal(out.metric, "leverage");
+  // Leverage should be descending
+  const leverages = out.top_operators.map((o) => o.leverage || 0);
+  assert.ok(leverages[0] >= leverages[1], "leverage should be descending");
+});
+
+test("get_best_operator with metric=cost_per_million sorts cheapest first", async () => {
+  const out = await callTool("get_best_operator", { n: 3, metric: "cost_per_million" });
+  assert.ok(out.top_operators);
+  assert.equal(out.metric, "cost_per_million");
+  // Cheapest (lowest $/M) should be first
+  const costs = out.top_operators.map((o) => o.cost_per_million).filter((c) => typeof c === "number");
+  if (costs.length >= 2) {
+    assert.ok(costs[0] <= costs[1], "cost_per_million should be ascending (cheapest first)");
+  }
+});
+
+test("get_best_operator with platform=claude filters to claude", async () => {
+  const out = await callTool("get_best_operator", { n: 5, platform: "claude" });
+  assert.ok(out.top_operators);
+  assert.equal(out.platform, "claude");
+  // All returned operators should be on claude
+  for (const op of out.top_operators) {
+    assert.equal(op.platform, "claude", `operator ${op.codename} should be on claude`);
+  }
+});
+
+test("get_best_operator with invalid metric defaults to yield", async () => {
+  const out = await callTool("get_best_operator", { n: 1, metric: "bogus_metric" });
+  assert.equal(out.metric, "yield");
+});
+
+test("get_prompt_of_the_day returns today's prompt", async () => {
+  const out = await callTool("get_prompt_of_the_day", {});
+  assert.ok(out.question, "should have a question");
+  assert.ok(out.slug, "should have a slug");
+  assert.ok(out.metric, "should have a metric");
+  assert.ok(out.metric_label, "should have a metric_label");
+  assert.ok(out.metric_formula, "should have a metric_formula");
+  assert.ok(out.current_leader, "should have a current_leader");
+  assert.ok(out.shareable_url, "should have a shareable_url");
+  assert.ok(out.shareable_url.includes("signaaf.com"), "url should point to signaaf.com");
+  assert.equal(out.cta, "See the full ranking");
 });
 
 test("compare_self with text scores locally", async () => {
