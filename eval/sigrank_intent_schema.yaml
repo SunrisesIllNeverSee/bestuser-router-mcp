@@ -11,8 +11,8 @@
 #   - Confidence threshold: 0.78
 #   - Fallback: ask clarifying question
 
-server_name: sigrank-mcp
-version: "0.0.178"
+server_name: bestuser-router-mcp
+version: "0.1.1"
 description: >-
   AI operator leaderboard and benchmarking tools for comparing AI users,
   power users, and operator efficiency. Metric-aware: 9 canonical token
