@@ -10,6 +10,116 @@
 export const round = (n, d) =>
   Number.isFinite(n) ? Number(n.toFixed(d)) : null;
 
+/**
+ * CLASS_TIERS — the 8 base tier names (K.01–K.08) for display.
+ * SINGLE SOURCE OF TRUTH for tier-level display info.
+ *
+ * The permanent class is an EXPERIENCE ladder keyed on TOTAL TOKENS. Each tier
+ * has 3 sub-stages (I/II/III) — 24 stages total. The 24 thresholds live in
+ * RS05_CLASS_THRESHOLDS below. classify() returns the full sub-stage string
+ * (e.g. "REFINER II"). Use tierOf() to extract the base tier name.
+ *
+ * TRANSMITTER is NOT on this ladder — it is a temporary peak badge (RS.08).
+ *
+ * Mirrors the server's canon-ids.ts CLASS_TIERS + ruleset.ts RS05_CLASS_THRESHOLDS.
+ */
+export const CLASS_TIERS = [
+  "ARCH+",
+  "ARCH",
+  "POWER",
+  "BASE",
+  "SEEKER",
+  "REFINER",
+  "BEARER",
+  "IGNITER",
+];
+
+/**
+ * SIGNAL_CLASSES — the full 24 sub-stage names (8 tiers × 3 sub-stages I/II/III).
+ * Mirrors the server's SIGNAL_CLASSES set in lib/board/mappers.ts.
+ */
+export const SIGNAL_CLASSES = [
+  "ARCH+ I", "ARCH+ II", "ARCH+ III",
+  "ARCH I", "ARCH II", "ARCH III",
+  "POWER I", "POWER II", "POWER III",
+  "BASE I", "BASE II", "BASE III",
+  "SEEKER I", "SEEKER II", "SEEKER III",
+  "REFINER I", "REFINER II", "REFINER III",
+  "BEARER I", "BEARER II", "BEARER III",
+  "IGNITER I", "IGNITER II", "IGNITER III",
+];
+
+/**
+ * RS05_CLASS_THRESHOLDS — 24 total-token breakpoints (8 tiers × 3 sub-stages).
+ * Mirrors the server's lib/analytics/ruleset.ts RS05_CLASS_THRESHOLDS exactly.
+ */
+export const RS05_CLASS_THRESHOLDS = [
+  { class: "ARCH+ I", totalMin: 7068201104627 },
+  { class: "ARCH+ II", totalMin: 7068201104627 },
+  { class: "ARCH+ III", totalMin: 7068201104627 },
+  { class: "ARCH I", totalMin: 186207267611 },
+  { class: "ARCH II", totalMin: 98543134083 },
+  { class: "ARCH III", totalMin: 68766193943 },
+  { class: "POWER I", totalMin: 39958782379 },
+  { class: "POWER II", totalMin: 26955905621 },
+  { class: "POWER III", totalMin: 19141226889 },
+  { class: "BASE I", totalMin: 13960345961 },
+  { class: "BASE II", totalMin: 10189224970 },
+  { class: "BASE III", totalMin: 7747041813 },
+  { class: "SEEKER I", totalMin: 5446673659 },
+  { class: "SEEKER II", totalMin: 4014577247 },
+  { class: "SEEKER III", totalMin: 2961798768 },
+  { class: "REFINER I", totalMin: 2358346840 },
+  { class: "REFINER II", totalMin: 1845750357 },
+  { class: "REFINER III", totalMin: 1334876308 },
+  { class: "BEARER I", totalMin: 984078167 },
+  { class: "BEARER II", totalMin: 714619043 },
+  { class: "BEARER III", totalMin: 431702990 },
+  { class: "IGNITER I", totalMin: 216393332 },
+  { class: "IGNITER II", totalMin: 88999166 },
+  { class: "IGNITER III", totalMin: 0 },
+];
+
+export const UNCLASSED = "UNCLASSED";
+
+/** Extract the base tier name from a sub-stage string (e.g. "ARCH+ I" → "ARCH+"). */
+export function tierOf(cls) {
+  if (cls === UNCLASSED || cls == null) return cls;
+  const parts = String(cls).split(" ");
+  if (parts.length >= 2 && ["I", "II", "III"].includes(parts[parts.length - 1])) {
+    return parts.slice(0, -1).join(" ");
+  }
+  return cls;
+}
+
+/** Extract the sub-stage from a sub-stage string (e.g. "ARCH+ I" → "I"). */
+export function stageOf(cls) {
+  if (cls === UNCLASSED || cls == null) return null;
+  const parts = String(cls).split(" ");
+  const stage = parts[parts.length - 1];
+  return stage === "I" || stage === "II" || stage === "III" ? stage : null;
+}
+
+/**
+ * Map a class tier to a power-user band. The 8 experience tiers collapse into 5
+ * behavioral bands + UNCLASSED.
+ */
+const BAND = {
+  "ARCH+": "high",
+  ARCH: "high",
+  POWER: "mid",
+  BASE: "mid",
+  SEEKER: "early",
+  REFINER: "early",
+  BEARER: "entry",
+  IGNITER: "entry",
+  [UNCLASSED]: "nodata",
+};
+
+export function bandOf(klass) {
+  return BAND[tierOf(klass)] ?? "nodata";
+}
+
 export function cascade({ input, output, cacheCreate, cacheRead }) {
   const i = Number(input),
     o = Number(output),
@@ -47,21 +157,20 @@ export function cascade({ input, output, cacheCreate, cacheRead }) {
     leverage: round(leverage, 1),
     velocity: round(velocity, 3),
     dev10x: round(dev10x, 2),
-    class: classify(yield_, dev10x),
+    class: classify(total),
   };
   if (warnings.length > 0) result.warnings = warnings;
   return result;
 }
 
-export function classify(yieldVal, dev10x) {
-  if (yieldVal >= 1000 || dev10x >= 3) return "TRANSMITTER";
-  if (dev10x >= 1.45) return "ARCH+";
-  if (dev10x >= 1.35) return "ARCH";
-  if (dev10x >= 1.2) return "POWER";
-  if (dev10x >= 1.0) return "BASE";
-  if (dev10x >= 0) return "SEEKER";
-  if (dev10x >= -0.3) return "REFINER";
-  return "IGNITER";
+/** Classify an operator's experience stage from total tokens. Mirrors the
+ *  server's assignClass(totalTokens). Returns a full sub-stage string or UNCLASSED. */
+export function classify(totalTokens) {
+  if (totalTokens == null || !Number.isFinite(totalTokens)) return UNCLASSED;
+  for (const t of RS05_CLASS_THRESHOLDS) {
+    if (totalTokens >= t.totalMin) return t.class;
+  }
+  return "IGNITER III";
 }
 
 export function parsePillars(text) {

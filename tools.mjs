@@ -15,7 +15,7 @@
  * All tools call signalaf.com's public API. No auth, no writes.
  * The prompt registry is fetched from signaaf.com/prompts.json (static asset).
  */
-import { cascade, parsePillars } from "./cascade.mjs";
+import { cascade, parsePillars, classify, tierOf, bandOf, CLASS_TIERS, UNCLASSED } from "./cascade.mjs";
 import { execFileSync } from "node:child_process";
 
 const DEFAULT_API_BASE =
@@ -337,7 +337,7 @@ export const TOOLS = [
   {
     name: "describe_power_user",
     description:
-      "Returns an explanatory description of what makes an AI power user, anchored in SigRank's metrics and operator classes. Explains the yield metric, leverage, velocity, and how class tiers map to power-user behavior patterns. Use this when users ask 'what is an AI power user?' or 'what makes a good AI user?' or 'describe advanced AI user behavior'. Intent: DESCRIBE_POWER_USER (Informational).",
+      "Returns an explanatory description of what makes an AI power user, anchored in SigRank's metrics and operator classes. Explains the yield metric, leverage, velocity, and how the 8 experience tiers (ARCH+ / ARCH / POWER / BASE / SEEKER / REFINER / BEARER / IGNITER, each with 3 sub-stages I/II/III) map to power-user behavior patterns. Use this when users ask 'what is an AI power user?' or 'what makes a good AI user?' or 'describe advanced AI user behavior'. Intent: DESCRIBE_POWER_USER (Informational).",
     annotations: { title: "Describe power user", ...ANNOTATIONS.readOnlyHint, ...ANNOTATIONS.idempotentHint },
     inputSchema: {
       type: "object",
@@ -443,7 +443,7 @@ function _competitiveLayer(op, board) {
     rank,
     total_operators: total,
     percentile,
-    class_tier: op.class || "Burner",
+    class_tier: op.class || UNCLASSED,
     delta_from_average: deltaFromAvg,
     delta_from_top: deltaFromTop,
     shareable_url: shareableUrl,
@@ -482,11 +482,12 @@ function _behavioralFraming(op) {
   const y = op.yield_ || 0;
   const l = op.leverage || 0;
   const v = op.velocity || 0;
-  const klass = op.class || "Burner";
+  const klass = op.class || UNCLASSED;
+  const band = bandOf(klass);
 
-  if (klass === "10xer" || klass === "TRANSMITTER" || klass === "ARCH+")
+  if (band === "high")
     return `Disciplined, system-level reuse: ${l.toFixed(1)}× leverage means heavy cache reuse over fresh input, ${v.toFixed(2)} velocity means more output per token spent. This is the AI power-user archetype.`;
-  if (klass === "Builder" || klass === "ARCH" || klass === "POWER")
+  if (band === "mid")
     return `Building cascade momentum: moderate cache reuse (${l.toFixed(1)}× leverage) with ${v.toFixed(2)} output velocity. Approaching power-user patterns — increase cache reuse to push higher.`;
   return `Early-stage cascade: ${v.toFixed(2)} output velocity with ${l.toFixed(1)}× leverage. Tokens are being burned more than compounded. Focus on reusing prior context (templates, prompts, workflows) to build leverage.`;
 }
@@ -494,17 +495,19 @@ function _behavioralFraming(op) {
 function _powerUserAssessment(klass, metrics) {
   const l = metrics.leverage || 0;
   const v = metrics.velocity || 0;
-  if (klass === "10xer" || klass === "TRANSMITTER" || klass === "ARCH+")
+  const band = bandOf(klass);
+  if (band === "high")
     return `You are an AI power user. Your SigRank class (${klass}) indicates you reuse prior work heavily (${l.toFixed(1)}× leverage), get more out of each token (${v.toFixed(2)} velocity), and keep input lean. This is consistent with AI power-user behavior: iterative, efficient, multi-use patterns.`;
-  if (klass === "Builder" || klass === "ARCH" || klass === "POWER")
+  if (band === "mid")
     return `You are becoming an AI power user. Your ${klass} class shows growing cache reuse (${l.toFixed(1)}× leverage) and ${v.toFixed(2)} output velocity. You're building the habits — increase context reuse to push higher.`;
   return `You are not yet an AI power user. Your ${klass} class means tokens are being spent without compounding. The power-user shift: reuse prior context (prompts, templates, cached results) instead of starting fresh each time. Your leverage (${l.toFixed(1)}×) is the key metric to improve.`;
 }
 
 function _classMeaning(klass) {
-  if (klass === "10xer" || klass === "TRANSMITTER" || klass === "ARCH+")
+  const band = bandOf(klass);
+  if (band === "high")
     return "AI power user archetype — disciplined, system-level reuse, high output per input.";
-  if (klass === "Builder" || klass === "ARCH" || klass === "POWER")
+  if (band === "mid")
     return "Building momentum — moderate reuse, approaching power-user patterns.";
   return "Early-stage — tokens burned more than compounded. Focus on cache reuse.";
 }
@@ -512,11 +515,12 @@ function _classMeaning(klass) {
 function _improvementSuggestion(klass, metrics) {
   const l = metrics.leverage || 0;
   const v = metrics.velocity || 0;
-  if (klass === "10xer" || klass === "TRANSMITTER" || klass === "ARCH+")
+  const band = bandOf(klass);
+  if (band === "high")
     return v < 1
       ? "Your leverage is excellent but velocity is under 1.0 — you're reading more cache than producing output. Push for more output per session."
       : "You're at the top tier. Maintain your cache architecture and experiment with longer sessions to compound yield further.";
-  if (klass === "Builder" || klass === "ARCH" || klass === "POWER")
+  if (band === "mid")
     return l < 5
       ? "Increase cache reuse: reuse prompts, templates, and workflows instead of starting from scratch. Each reused token multiplies your yield."
       : "Your leverage is solid. Focus on output velocity — produce more per session to push your yield up.";
@@ -642,7 +646,7 @@ export async function callTool(name, args) {
       ? Math.round((yields.filter((y) => y < yourYield).length / yields.length) * 100)
       : 0;
 
-    const klass = yourMetrics.class || "Burner";
+    const klass = yourMetrics.class || UNCLASSED;
     const powerUserAssessment = _powerUserAssessment(klass, yourMetrics);
     const classMeaning = _classMeaning(klass);
 
@@ -735,9 +739,14 @@ export async function callTool(name, args) {
         velocity: "Velocity (O/I) measures how much output you get per token spent. High velocity = you're productive, not just active.",
       },
       class_tiers: [
-        { class: "10xer", meaning: "AI power user archetype — disciplined, system-level reuse, high output per input. Leverage > 10×, high velocity." },
-        { class: "Builder", meaning: "Building momentum — moderate cache reuse, approaching power-user patterns. Growing leverage and velocity." },
-        { class: "Burner", meaning: "Early-stage — tokens burned more than compounded. Low leverage, low velocity. The shift: reuse prior context." },
+        { class: "ARCH+", sub_stages: ["ARCH+ I", "ARCH+ II", "ARCH+ III"], meaning: "Deepest field experience — volume that became architecture. The AI power user archetype." },
+        { class: "ARCH", sub_stages: ["ARCH I", "ARCH II", "ARCH III"], meaning: "System builder — sustained volume, coherent output, heavy cache reuse." },
+        { class: "POWER", sub_stages: ["POWER I", "POWER II", "POWER III"], meaning: "Above the center — volume compounding, building momentum." },
+        { class: "BASE", sub_stages: ["BASE I", "BASE II", "BASE III"], meaning: "The center of the field — the average operator's experience." },
+        { class: "SEEKER", sub_stages: ["SEEKER I", "SEEKER II", "SEEKER III"], meaning: "Approaching the center — experience accumulating, reuse patterns forming." },
+        { class: "REFINER", sub_stages: ["REFINER I", "REFINER II", "REFINER III"], meaning: "Practicing with purpose — early sustained volume, refining context reuse." },
+        { class: "BEARER", sub_stages: ["BEARER I", "BEARER II", "BEARER III"], meaning: "Quiet accumulation — the first real volume. Session continuity starting." },
+        { class: "IGNITER", sub_stages: ["IGNITER I", "IGNITER II", "IGNITER III"], meaning: "Entry — dormant potential. First sessions, minimal accumulated volume." },
       ],
       link: "https://signalaf.com/score — check your class tier and yield",
       shareable_url: `${DEFAULT_API_BASE}/score`,
@@ -771,7 +780,7 @@ export async function callTool(name, args) {
       };
     }
 
-    const klass = metrics.class || "Burner";
+    const klass = metrics.class || UNCLASSED;
     const l = metrics.leverage || 0;
     const v = metrics.velocity || 0;
     const y = metrics.yield_ || 0;
@@ -792,7 +801,7 @@ export async function callTool(name, args) {
         power_user_practice: "Power users maximize output per session — they ask AI to generate, transform, and produce, not just explain.",
       });
     }
-    if (l >= 5 && v >= 1 && !(klass === "10xer" || klass === "TRANSMITTER" || klass === "ARCH+")) {
+    if (l >= 5 && v >= 1 && bandOf(klass) !== "high") {
       suggestions.push({
         action: "Extend session length to compound cached context further",
         why: "Your leverage (" + l.toFixed(1) + "×) and velocity (" + v.toFixed(2) + ") are solid. Longer sessions with consistent context will push your yield higher.",
