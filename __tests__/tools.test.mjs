@@ -78,7 +78,7 @@ test("get_prompt_of_the_day returns today's prompt", async () => {
   assert.ok(out.metric_formula, "should have a metric_formula");
   assert.ok(out.current_leader, "should have a current_leader");
   assert.ok(out.shareable_url, "should have a shareable_url");
-  assert.ok(out.shareable_url.includes("signalaf.com"), "url should point to signalaf.com");
+  assert.ok(out.shareable_url.includes("sigeconomy.com"), "url should point to sigeconomy.com");
   assert.equal(out.cta, "See the full ranking");
 });
 
