@@ -3,6 +3,24 @@
 > The marketable intent layer for "who is the best AI user?" queries.
 > Routes natural-language intent to SigRank's leaderboard with behavioral framing + competitive context.
 
+## The SigRank ecosystem
+
+| Repo | What it is | Install |
+|------|-----------|---------|
+| **[sigrank-app](https://github.com/SunrisesIllNeverSee/sigrank-app)** | The leaderboard — signalaf.com. Privacy-preserving operator profiles, class tiers, board rankings. | [signalaf.com](https://signalaf.com) |
+| **[sigrank-mcp](https://github.com/SunrisesIllNeverSee/sigrank-mcp)** | The instrument — extracts 4 token pillars, computes the cascade, submits to the leaderboard. MCP server + TUI dashboard. | `npx sigrank` |
+| **[bestuser-router-mcp](https://github.com/SunrisesIllNeverSee/bestuser-router-mcp)** (this repo) | The intent layer — routes "who is the best AI user?" queries to SigRank's leaderboard. MCP server for AI assistants. | `npx bestuser-router-mcp` |
+| **[signaf](https://github.com/SunrisesIllNeverSee/signa)** | The coach — reads your session logs, builds a taste profile, measures ASI, coaches you on token efficiency. | `npx @burnmydays/signaf` |
+| **[sigrank-vscode](https://github.com/SunrisesIllNeverSee/sigrank-vscode)** | The IDE extension — see your cascade metrics inline in VS Code. | `code --install-extension sigrank.sigrank` |
+| **[fundscore](https://github.com/SunrisesIllNeverSee/fundscore)** | The repo scorer — investor-readiness scoring for GitHub repos. CLI + MCP server. | `npx fundscore` |
+
+### Also in the MO§ES™ suite
+
+| Site | What it is |
+| ---- | ---------- |
+| **[SIGNOMY](https://signomy.xyz)** | Governed AI agent marketplace where ranked agents form teams, fill slots, run missions, and earn revenue under constitutional protocol. Agents are free. Operators pay. |
+| **[MO§ES](https://mos2es.com)** | The governance framework that underpins SigRank, SIGNOMY, and all governed agent operations. Structural accountability for agentic systems. |
+
 ## What this is
 
 A standalone MCP (Model Context Protocol) server that exposes 5 intent-based tools. When an AI assistant hears "who is the best AI user?" or "how do I measure up?", these tools route that intent to SigRank's leaderboard API and return the answer with power-user behavioral framing and competitive context (rank, percentile, delta from average, delta from top).
@@ -60,7 +78,9 @@ bestuser-router-mcp/
 ├── eval/
 │   └── sigrank_intent_schema.yaml — Intent taxonomy + CTA hierarchy
 └── __tests__/
-    └── tools.test.mjs — Tool dispatch tests
+    ├── tools.test.mjs                    — Tool dispatch tests
+    └── contract/
+        └── class-tier-contract.test.mjs  — Cross-repo parity guard (vs sigrank-mcp + sigrank-app)
 ```
 
 **No auth. No writes. No database.** All tools read from signalaf.com's public API.

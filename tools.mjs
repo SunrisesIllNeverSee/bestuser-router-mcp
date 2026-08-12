@@ -13,7 +13,7 @@
  *   OPTIMIZE_EFFICIENCY      → optimize_efficiency
  *
  * All tools call signalaf.com's public API. No auth, no writes.
- * The prompt registry is fetched from signaaf.com/prompts.json (static asset).
+ * The prompt registry is fetched from signalaf.com/prompts.json (static asset).
  */
 import { cascade, parsePillars, classify, tierOf, bandOf, CLASS_TIERS, UNCLASSED } from "./cascade.mjs";
 import { execFileSync } from "node:child_process";
@@ -21,7 +21,7 @@ import { execFileSync } from "node:child_process";
 const DEFAULT_API_BASE =
   process.env.SIGRANK_API_BASE || "https://signalaf.com";
 const DEFAULT_SATELLITE_BASE =
-  process.env.SIGRANK_SATELLITE_BASE || "https://signaaf.com";
+  process.env.SIGRANK_SATELLITE_BASE || "https://signalaf.com";
 const MAX_INPUT = 1_000_000;
 
 // ── Canonical metrics (mirrors sigarena/lib/prompts.ts) ──────────────────────
@@ -291,7 +291,7 @@ export const TOOLS = [
         metric_formula: { type: "string", description: "The formula for this metric" },
         current_leader: { type: "object", description: "The current #1 operator for this metric" },
         story: { type: "string", description: "Narrative context for this metric" },
-        shareable_url: { type: "string", description: "Link to the full ranking on signaaf.com" },
+        shareable_url: { type: "string", description: "Link to the full ranking on signalaf.com" },
         cta: { type: "string", description: "Call-to-action" },
       },
     },
@@ -570,13 +570,13 @@ export async function callTool(name, args) {
 
   // ── get_prompt_of_the_day ──
   if (name === "get_prompt_of_the_day") {
-    // Fetch the prompt registry from signaaf.com (static asset, served from
+    // Fetch the prompt registry from signalaf.com (static asset, served from
     // Cloudflare's ASSETS binding — zero Worker invocations).
     const url = `${DEFAULT_SATELLITE_BASE}/prompts.json`;
     const res = await robustFetch(url, {
       headers: { accept: "application/json", "user-agent": "bestuser-router-mcp/0.1.0" },
     });
-    if (!res.ok) throw new Error(`signaaf.com/prompts.json → HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`signalaf.com/prompts.json → HTTP ${res.status}`);
     const registry = await res.json();
 
     // Pick today's prompt using the same rotation as the sigarena homepage.

@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/docs/reference/server-json/generic-server-json.schema.json",
   "name": "io.github.SunrisesIllNeverSee/bestuser-router",
   "description": "The marketable intent layer for 'who is the best AI user?' queries. 5 intent tools that route natural-language questions to SigRank's leaderboard with behavioral framing + competitive context. Calls signalaf.com's public API. No auth, no writes.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp",
   "license": "MIT",
   "author": {
