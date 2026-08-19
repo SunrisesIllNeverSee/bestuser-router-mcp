@@ -1,0 +1,28 @@
+name: Repo Standard
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-standard:
+    name: repo-standard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Validate repository standard
+        env:
+          REPO_STANDARD_BASE: ${{ github.event.pull_request.base.sha || '' }}
+        run: python3 .repo/scripts/repo_check.py --ci
