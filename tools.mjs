@@ -17,6 +17,13 @@
  * served from the satellite site).
  */
 import { cascade, parsePillars, classify, tierOf, bandOf, CLASS_TIERS, UNCLASSED } from "./cascade.mjs";
+import {
+  findMentors,
+  findPeers,
+  findComplementary,
+  peerSummary,
+  tierRank,
+} from "./peer-matching.mjs";
 import { execFileSync } from "node:child_process";
 
 const DEFAULT_API_BASE =
@@ -380,6 +387,45 @@ export const TOOLS = [
         competitive_summary: { type: "string" },
         shareable_url: { type: ["string", "null"] },
         suggestions: { type: "array" },
+        summary: { type: "string" },
+        cta: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "discover_peers",
+    description:
+      "Discovers mentors, peers, and complementary operators for any operator on the SigRank leaderboard. Pass a codename to find operators they should learn from: (1) Mentors — 1-2 class tiers above with similar cascade shapes, including the specific pillar delta that explains the yield gap (e.g. '12× your cache reads'). (2) Peers — same class tier, ranked by yield proximity. (3) Complementary — operators whose strength is the operator's weakness. Use this when users ask 'who should I learn from?' or 'find me a mentor on the leaderboard' or 'who are my peers?'. Intent: DISCOVER_PEERS.",
+    annotations: { title: "Discover peers and mentors", ...ANNOTATIONS.readOnlyHint, ...ANNOTATIONS.openWorldHint },
+    inputSchema: {
+      type: "object",
+      properties: {
+        codename: {
+          type: "string",
+          description: "The operator's codename on the SigRank leaderboard. Case-insensitive.",
+        },
+        platform: {
+          type: "string",
+          enum: PLATFORMS,
+          description: "Filter peers by platform (default: the operator's own platform). Use 'all' to search across all platforms.",
+        },
+        n: {
+          type: "integer",
+          description: "Number of operators to return per category (default: 5, max: 20).",
+          minimum: 1,
+          maximum: 20,
+        },
+      },
+      required: ["codename"],
+      description: "Requires a codename. Optionally filter by platform and limit results.",
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        your_profile: { type: "object" },
+        mentors: { type: "array" },
+        peers: { type: "array" },
+        complementary: { type: "array" },
         summary: { type: "string" },
         cta: { type: "string" },
       },
@@ -838,6 +884,97 @@ export async function callTool(name, args) {
       suggestions,
       summary,
       cta: "Improve my score",
+    };
+  }
+
+  // ── discover_peers ──
+  if (name === "discover_peers") {
+    const codename = String(args?.codename || "").trim();
+    if (!codename)
+      throw new Error("discover_peers requires a `codename` argument.");
+
+    const n = Math.min(20, Math.max(1, args?.n ?? 5));
+    const platformFilter = args?.platform === "all" ? null : (PLATFORMS.includes(args?.platform) ? args.platform : null);
+
+    // Fetch the operator's profile and the full leaderboard in parallel.
+    const [profile, board] = await Promise.all([
+      fetchJson(`/api/v1/operators/${encodeURIComponent(codename)}`),
+      fetchJson("/api/v1/leaderboard?metric=yield_&limit=2000"),
+    ]);
+
+    const entries = boardEntries(board);
+    const boardEntry = entries.find(
+      (op) => op.codename?.toLowerCase() === codename.toLowerCase(),
+    );
+
+    if (!boardEntry) {
+      return {
+        status: "not_on_board",
+        codename,
+        detail: `${codename} is not on the leaderboard. They may need to enroll and submit snapshots first.`,
+        profile,
+      };
+    }
+
+    // Merge profile + board entry (board entry has raw pillars for pillar delta).
+    const operator = {
+      ...boardEntry,
+      ...profile,
+      class_tier: boardEntry.class_tier || boardEntry.class || profile.class_tier,
+      yield_: boardEntry.yield_ ?? profile.yield_,
+      leverage: boardEntry.leverage ?? profile.leverage,
+      velocity: boardEntry.velocity ?? profile.velocity,
+      snr: boardEntry.snr ?? profile.snr,
+      platform: boardEntry.platform || profile.platform,
+    };
+
+    const myTier = tierRank(operator.class_tier);
+    const opts = { n, apiBase: DEFAULT_API_BASE, platform: platformFilter };
+
+    if (myTier < 0) {
+      // UNCLASSED — no class to match on. Return complementary only.
+      const complementary = findComplementary(operator, entries, opts);
+      return {
+        your_profile: {
+          codename: operator.codename,
+          class_tier: operator.class_tier,
+          platform: operator.platform,
+          yield_: operator.yield_,
+          leverage: operator.leverage,
+          velocity: operator.velocity,
+          rank: operator.rank,
+        },
+        mentors: [],
+        peers: [],
+        complementary,
+        summary: `${codename} is UNCLASSED — no class tier to match peers on. ${complementary.length} complementary operators found based on cascade dimensions.`,
+        cta: "Study their cascade",
+      };
+    }
+
+    const mentors = findMentors(operator, entries, opts).map((m) => ({
+      ...m,
+      shareable_url: `${DEFAULT_API_BASE}/operator/${encodeURIComponent(m.codename)}`,
+    }));
+    const peers = findPeers(operator, entries, opts);
+    const complementary = findComplementary(operator, entries, opts);
+    const summary = peerSummary(operator, mentors, peers, complementary);
+
+    return {
+      your_profile: {
+        codename: operator.codename,
+        class_tier: operator.class_tier,
+        platform: operator.platform,
+        yield_: operator.yield_,
+        leverage: operator.leverage,
+        velocity: operator.velocity,
+        rank: operator.rank,
+      },
+      mentors,
+      peers,
+      complementary,
+      summary,
+      cta: "Study their cascade",
     };
   }
 

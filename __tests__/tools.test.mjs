@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TOOLS, callTool } from "../tools.mjs";
 
-test("TOOLS exports 6 intent tools", () => {
-  assert.equal(TOOLS.length, 6);
+test("TOOLS exports 7 intent tools", () => {
+  assert.equal(TOOLS.length, 7);
   const names = TOOLS.map((t) => t.name);
   assert.ok(names.includes("get_best_operator"));
   assert.ok(names.includes("get_prompt_of_the_day"));
@@ -11,6 +11,7 @@ test("TOOLS exports 6 intent tools", () => {
   assert.ok(names.includes("compare_operators"));
   assert.ok(names.includes("describe_power_user"));
   assert.ok(names.includes("optimize_efficiency"));
+  assert.ok(names.includes("discover_peers"));
 });
 
 test("describe_power_user returns static response with CTA", async () => {
