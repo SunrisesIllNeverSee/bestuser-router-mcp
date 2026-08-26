@@ -673,7 +673,7 @@ export async function callTool(name, args) {
         return { error: "input_too_large", detail: `text exceeds ${MAX_INPUT} chars.` };
       }
       const pillars = parsePillars(text);
-      const c = cascade(pillars);
+      const c = cascade(pillars.input, pillars.output, pillars.cacheCreate, pillars.cacheRead);
       yourMetrics = {
         codename: "you (local)",
         yield_: c.yield,
@@ -817,7 +817,7 @@ export async function callTool(name, args) {
         return { error: "input_too_large", detail: `text exceeds ${MAX_INPUT} chars.` };
       }
       const pillars = parsePillars(text);
-      const c = cascade(pillars);
+      const c = cascade(pillars.input, pillars.output, pillars.cacheCreate, pillars.cacheRead);
       metrics = {
         codename: "you (local)",
         yield_: c.yield,

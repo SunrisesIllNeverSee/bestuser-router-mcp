@@ -1,14 +1,30 @@
 /**
- * cascade.mjs — pure SigRank yield cascade (vendored from sigrank-mcp).
- * No deps, no transport. Mirrors sigrank-app/lib/ingest/bridge.ts.
+ * cascade.mjs — SigRank yield cascade facade.
  *
- * Degenerate-input policy:
+ * The canonical cascade math (cascade, classify, round, RS05_CLASS_THRESHOLDS)
+ * is now imported from the published `@sigrank/cascade` package instead of
+ * being vendored here. This file re-exports that math and keeps the
+ * display/parsing helpers (CLASS_TIERS, SIGNAL_CLASSES, UNCLASSED, tierOf,
+ * stageOf, bandOf, parsePillars) that are not part of the package's pure-math
+ * surface.
+ *
+ * API note: `@sigrank/cascade`'s `cascade()` takes positional args
+ *   cascade(input, output, cacheCreate, cacheRead)
+ * and returns { yield, snr, leverage, velocity, dev10x, class, warnings, pillars }.
+ *
+ * Degenerate-input policy (from the package):
  *   - Any pillar that collapses a denominator returns null for affected metrics.
  *   - A `warnings[]` array is attached when any metric is null.
  *   - The cascade is NEVER thrown away — partial results are useful.
  */
-export const round = (n, d) =>
-  Number.isFinite(n) ? Number(n.toFixed(d)) : null;
+
+// ── Canonical math (re-exported from the published package) ────────────────
+export {
+  cascade,
+  classify,
+  round,
+  RS05_CLASS_THRESHOLDS,
+} from "@sigrank/cascade";
 
 /**
  * CLASS_TIERS — the 8 base tier names (K.01–K.08) for display.
@@ -16,12 +32,11 @@ export const round = (n, d) =>
  *
  * The permanent class is an EXPERIENCE ladder keyed on TOTAL TOKENS. Each tier
  * has 3 sub-stages (I/II/III) — 24 stages total. The 24 thresholds live in
- * RS05_CLASS_THRESHOLDS below. classify() returns the full sub-stage string
- * (e.g. "REFINER II"). Use tierOf() to extract the base tier name.
+ * RS05_CLASS_THRESHOLDS (re-exported from @sigrank/cascade above). classify()
+ * returns the full sub-stage string (e.g. "REFINER II"). Use tierOf() to
+ * extract the base tier name.
  *
  * TRANSMITTER is NOT on this ladder — it is a temporary peak badge (RS.08).
- *
- * Mirrors the server's canon-ids.ts CLASS_TIERS + ruleset.ts RS05_CLASS_THRESHOLDS.
  */
 export const CLASS_TIERS = [
   "ARCH+",
@@ -36,7 +51,6 @@ export const CLASS_TIERS = [
 
 /**
  * SIGNAL_CLASSES — the full 24 sub-stage names (8 tiers × 3 sub-stages I/II/III).
- * Mirrors the server's SIGNAL_CLASSES set in lib/board/mappers.ts.
  */
 export const SIGNAL_CLASSES = [
   "ARCH+ I", "ARCH+ II", "ARCH+ III",
@@ -47,37 +61,6 @@ export const SIGNAL_CLASSES = [
   "REFINER I", "REFINER II", "REFINER III",
   "BEARER I", "BEARER II", "BEARER III",
   "IGNITER I", "IGNITER II", "IGNITER III",
-];
-
-/**
- * RS05_CLASS_THRESHOLDS — 24 total-token breakpoints (8 tiers × 3 sub-stages).
- * Mirrors the server's lib/analytics/ruleset.ts RS05_CLASS_THRESHOLDS exactly.
- */
-export const RS05_CLASS_THRESHOLDS = [
-  { class: "ARCH+ I", totalMin: 7068201104627 },
-  { class: "ARCH+ II", totalMin: 3000000000000 },
-  { class: "ARCH+ III", totalMin: 1000000000000 },
-  { class: "ARCH I", totalMin: 186207267611 },
-  { class: "ARCH II", totalMin: 98543134083 },
-  { class: "ARCH III", totalMin: 68766193943 },
-  { class: "POWER I", totalMin: 39958782379 },
-  { class: "POWER II", totalMin: 26955905621 },
-  { class: "POWER III", totalMin: 19141226889 },
-  { class: "BASE I", totalMin: 13960345961 },
-  { class: "BASE II", totalMin: 10189224970 },
-  { class: "BASE III", totalMin: 7747041813 },
-  { class: "SEEKER I", totalMin: 5446673659 },
-  { class: "SEEKER II", totalMin: 4014577247 },
-  { class: "SEEKER III", totalMin: 2961798768 },
-  { class: "REFINER I", totalMin: 2358346840 },
-  { class: "REFINER II", totalMin: 1845750357 },
-  { class: "REFINER III", totalMin: 1334876308 },
-  { class: "BEARER I", totalMin: 984078167 },
-  { class: "BEARER II", totalMin: 714619043 },
-  { class: "BEARER III", totalMin: 431702990 },
-  { class: "IGNITER I", totalMin: 216393332 },
-  { class: "IGNITER II", totalMin: 88999166 },
-  { class: "IGNITER III", totalMin: 0 },
 ];
 
 export const UNCLASSED = "UNCLASSED";
@@ -118,59 +101,6 @@ const BAND = {
 
 export function bandOf(klass) {
   return BAND[tierOf(klass)] ?? "nodata";
-}
-
-export function cascade({ input, output, cacheCreate, cacheRead }) {
-  const i = Number(input),
-    o = Number(output),
-    cw = Number(cacheCreate),
-    cr = Number(cacheRead);
-  const total = i + o + cw + cr;
-  const warnings = [];
-
-  const snrDenom = i + o;
-  const snr = snrDenom > 0 ? o / snrDenom : null;
-  if (snr === null) warnings.push("snr_undefined: input+output=0");
-
-  const velocity = i > 0 ? o / i : null;
-  if (velocity === null) warnings.push("velocity_undefined: input=0");
-
-  const leverage = i > 0 ? cr / i : null;
-  if (leverage === null) warnings.push("leverage_undefined: input=0");
-
-  const yield_ =
-    leverage !== null && velocity !== null ? leverage * velocity : null;
-  if (yield_ === null && !warnings.some((w) => w.startsWith("yield")))
-    warnings.push("yield_undefined: requires input>0");
-
-  let dev10x = null;
-  if (i > 0 && o > 0 && cw > 0 && cr > 0) {
-    dev10x = Math.log10((o / i) * (cw / o) * (cr / cw));
-  } else {
-    warnings.push("dev10x_undefined: requires all four pillars > 0");
-  }
-
-  const result = {
-    pillars: { input: i, output: o, cacheCreate: cw, cacheRead: cr, total },
-    yield: round(yield_, 2),
-    snr: round(snr, 4),
-    leverage: round(leverage, 1),
-    velocity: round(velocity, 3),
-    dev10x: round(dev10x, 2),
-    class: classify(total),
-  };
-  if (warnings.length > 0) result.warnings = warnings;
-  return result;
-}
-
-/** Classify an operator's experience stage from total tokens. Mirrors the
- *  server's assignClass(totalTokens). Returns a full sub-stage string or UNCLASSED. */
-export function classify(totalTokens) {
-  if (totalTokens == null || !Number.isFinite(totalTokens)) return UNCLASSED;
-  for (const t of RS05_CLASS_THRESHOLDS) {
-    if (totalTokens >= t.totalMin) return t.class;
-  }
-  return "IGNITER III";
 }
 
 export function parsePillars(text) {

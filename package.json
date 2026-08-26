@@ -34,7 +34,8 @@
     "url": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@sigrank/cascade": "^0.1.1"
   },
   "engines": {
     "node": ">=18"
