@@ -7,12 +7,14 @@
  * framing + competitive context. Calls signalaf.com's public API. No auth, no
  * writes.
  *
- * 5 intent tools:
+ * 7 intent tools:
  *   get_best_operator    — "who is the best AI user?"
  *   compare_self         — "how do I measure up?"
  *   compare_operators    — "compare X vs Y"
  *   describe_power_user  — "what makes a power user?"
  *   optimize_efficiency  — "how can I be more efficient?"
+ *   get_prompt_of_the_day — "what's today's prompt?"
+ *   discover_peers       — "who should I learn from?"
  *
  * Usage for AI clients: runs as an MCP stdio server in non-TTY context.
  *   npx bestuser-router-mcp
@@ -54,7 +56,17 @@ process.on("unhandledRejection", (reason) => {
 async function main() {
   const server = new Server(
     { name: "bestuser-router-mcp", version: serverVersion() },
-    { capabilities: { tools: { listChanged: false } } },
+    {
+      capabilities: { tools: { listChanged: false } },
+      instructions:
+        "BestUserRouter MCP — the marketable intent layer for 'who is the best AI user?' queries. " +
+        "Routes natural-language intent to SigRank's leaderboard at signalaf.com with behavioral " +
+        "framing and competitive context. All tools are read-only (no auth, no writes). " +
+        "Use get_best_operator for leaderboard queries, compare_self for self-assessment, " +
+        "compare_operators for head-to-head, describe_power_user for scoring explanations, " +
+        "optimize_efficiency for improvement suggestions, get_prompt_of_the_day for the daily " +
+        "featured prompt, and discover_peers for mentor/peer discovery.",
+    },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -80,7 +92,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  process.stderr.write(`[bestuser-router-mcp] v${serverVersion()} ready (5 intent tools)\n`);
+  process.stderr.write(`[bestuser-router-mcp] v${serverVersion()} ready (7 intent tools)\n`);
 }
 
 main();

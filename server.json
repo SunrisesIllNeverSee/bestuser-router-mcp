@@ -86,5 +86,19 @@
     }
   ],
   "keywords": ["mcp", "sigrank", "ai-leaderboard", "intent-routing", "best-user", "power-user", "token-efficiency", "yield", "model-context-protocol"],
-  "categories": ["developer-tools", "ai-productivity"]
+  "categories": ["developer-tools", "ai-productivity"],
+  "environmentVariables": [
+    {
+      "name": "SIGRANK_API_BASE",
+      "description": "Leaderboard API base URL",
+      "default": "https://signalaf.com",
+      "required": false
+    },
+    {
+      "name": "SIGRANK_SATELLITE_BASE",
+      "description": "Satellite site for prompt registry + shareable URLs",
+      "default": "https://sigeconomy.com",
+      "required": false
+    }
+  ]
 }
