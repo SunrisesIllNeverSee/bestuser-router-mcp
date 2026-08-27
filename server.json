@@ -85,8 +85,8 @@
       }
     }
   ],
-  "keywords": ["mcp", "sigrank", "ai-leaderboard", "intent-routing", "best-user", "power-user", "token-efficiency", "yield", "model-context-protocol"],
-  "categories": ["developer-tools", "ai-productivity"],
+  "keywords": ["mcp", "sigrank", "ai-leaderboard", "intent-routing", "best-user", "power-user", "token-efficiency", "yield", "model-context-protocol", "telemetry", "coding-metrics", "yield-cascade", "ai-agents"],
+  "categories": ["developer-tools", "ai-and-machine-learning", "monitoring"],
   "environmentVariables": [
     {
       "name": "SIGRANK_API_BASE",
