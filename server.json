@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/docs/reference/server-json/generic-server-json.schema.json",
   "name": "io.github.SunrisesIllNeverSee/bestuser-router",
-  "description": "The marketable intent layer for 'who is the best AI user?' queries. 5 intent tools that route natural-language questions to SigRank's leaderboard with behavioral framing + competitive context. Calls signalaf.com's public API. No auth, no writes.",
-  "version": "0.1.1",
+  "description": "Marketable intent layer for 'who is the best AI user?' queries. 7 tools routing to SigRank's leaderboard. No auth, no writes.",
+  "version": "0.2.0",
   "homepage": "https://github.com/SunrisesIllNeverSee/bestuser-router-mcp",
   "license": "MIT",
   "author": {
@@ -64,6 +64,24 @@
       "annotations": {
         "readOnlyHint": true,
         "idempotentHint": true
+      }
+    },
+    {
+      "name": "get_prompt_of_the_day",
+      "description": "Returns today's featured prompt from the SigRank prompt registry — a canonical 'who is the best AI user?' question with the current leader, metric formula, and link to the full ranking. Use when users ask 'what's today's prompt?' or 'show me the prompt of the day'.",
+      "title": "Get prompt of the day",
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "discover_peers",
+      "description": "Discovers mentors, peers, and complementary operators for any operator on the SigRank leaderboard. Pass a codename to find operators they should learn from. Use when users ask 'who should I learn from?' or 'find me a mentor'.",
+      "title": "Discover peers and mentors",
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
       }
     }
   ],

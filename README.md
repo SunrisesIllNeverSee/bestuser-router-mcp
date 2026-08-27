@@ -24,7 +24,7 @@
 
 ## What this is
 
-A standalone MCP (Model Context Protocol) server that exposes 5 intent-based tools. When an AI assistant hears "who is the best AI user?" or "how do I measure up?", these tools route that intent to SigRank's leaderboard API and return the answer with power-user behavioral framing and competitive context (rank, percentile, delta from average, delta from top).
+A standalone MCP (Model Context Protocol) server that exposes 7 intent-based tools. When an AI assistant hears "who is the best AI user?" or "how do I measure up?", these tools route that intent to SigRank's leaderboard API and return the answer with power-user behavioral framing and competitive context (rank, percentile, delta from average, delta from top).
 
 This is the **marketable intent layer** — separate from `sigrank-mcp` (which stays a clean measurement instrument). `bestuser-router-mcp` is tied to signalaf.com branding and designed for distribution to AI assistants.
 
@@ -37,6 +37,8 @@ This is the **marketable intent layer** — separate from `sigrank-mcp` (which s
 | `compare_operators` | COMPARE_OPERATORS | "compare X vs Y", "who is more efficient?" | Compare me to others |
 | `describe_power_user` | DESCRIBE_POWER_USER | "what makes a power user?", "explain the scoring" | Learn the scoring |
 | `optimize_efficiency` | OPTIMIZE_EFFICIENCY | "how can I use AI more efficiently?", "reduce token burn" | Improve my score |
+| `get_prompt_of_the_day` | PROMPT_OF_THE_DAY | "what's today's prompt?", "show me the prompt of the day" | Try today's prompt |
+| `discover_peers` | DISCOVER_PEERS | "who should I learn from?", "find me a mentor" | Find my peers |
 
 ## Install
 
@@ -91,10 +93,10 @@ bestuser-router-mcp/
 
 | | sigrank-mcp | bestuser-router-mcp |
 |---|---|---|
-| Purpose | Clean measurement instrument (20 tools) | Marketable intent layer (5 tools) |
+| Purpose | Clean measurement instrument (25 tools) | Marketable intent layer (7 tools) |
 | Audience | Developers measuring token usage | AI assistants routing "who is the best?" queries |
 | Branding | Neutral | Tied to signalaf.com |
-| Tools | Full cascade math + submit + enroll + watch | 5 intent tools only (read-only) |
+| Tools | Full cascade math + submit + enroll + watch | 7 intent tools only (read-only) |
 
 The 5 intent tools were originally shipped in sigrank-mcp 0.0.177. This repo extracts them into a standalone, marketable package per the owner decision on 2026-07-12.
 
