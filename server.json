@@ -50,7 +50,7 @@
     },
     {
       "name": "describe_power_user",
-      "description": "Returns an explanatory description of what makes an AI power user, anchored in SigRank's metrics. Use when users ask 'what is an AI power user?' or 'explain the scoring'.",
+      "description": "Returns an explanatory description of what makes an AI power user, anchored in Upsilon's metrics. Use when users ask 'what is an AI power user?' or 'explain the scoring'.",
       "title": "Describe power user",
       "annotations": {
         "readOnlyHint": true,

@@ -7,7 +7,7 @@
 
 **7 intent tools that make any AI assistant answer "who is the best AI user?" with live data.**
 
-SigRank evaluates the human using the AI — not the AI model itself.
+Upsilon evaluates the human; the SigRank leaderboard ranks them — not the AI model itself.
 
 [![npm version](https://img.shields.io/npm/v/bestuser-router-mcp.svg?style=flat-square&color=gold)](https://www.npmjs.com/package/bestuser-router-mcp)
 [![license](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](./LICENSE)

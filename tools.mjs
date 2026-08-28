@@ -345,7 +345,7 @@ export const TOOLS = [
   {
     name: "describe_power_user",
     description:
-      "Returns an explanatory description of what makes an AI power user, anchored in SigRank's metrics and operator classes. Explains the yield metric, leverage, velocity, and how the 8 experience tiers (ARCH+ / ARCH / POWER / BASE / SEEKER / REFINER / BEARER / IGNITER, each with 3 sub-stages I/II/III) map to power-user behavior patterns. Use this when users ask 'what is an AI power user?' or 'what makes a good AI user?' or 'describe advanced AI user behavior'. Intent: DESCRIBE_POWER_USER (Informational).",
+      "Returns an explanatory description of what makes an AI power user, anchored in Upsilon's metrics and operator classes. Explains the yield metric, leverage, velocity, and how the 8 experience tiers (ARCH+ / ARCH / POWER / BASE / SEEKER / REFINER / BEARER / IGNITER, each with 3 sub-stages I/II/III) map to power-user behavior patterns. Use this when users ask 'what is an AI power user?' or 'what makes a good AI user?' or 'describe advanced AI user behavior'. Intent: DESCRIBE_POWER_USER (Informational).",
     annotations: { title: "Describe power user", ...ANNOTATIONS.readOnlyHint, ...ANNOTATIONS.idempotentHint },
     inputSchema: {
       type: "object",
