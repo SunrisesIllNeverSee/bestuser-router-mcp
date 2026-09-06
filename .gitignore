@@ -4,10 +4,10 @@ dist/
 .DS_Store
 .env
 *.mcpb
-# Repository Standard runtime state
-.coord/micro/state/.session-current
-.coord/micro/state/.role-*
-.coord/micro/state/ACTIVITY.log
-.coord/micro/state/snapshots/
-.coord/micro/scratchpad-archive/
+# Repository Standard — coordination should not be in product repos
+.coord/
 .repo/.cache/
+
+# Skylos scan output
+skylos-sec.json
+.skylos/
