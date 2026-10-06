@@ -1,0 +1,5 @@
+repo_id: bestuser_router_mcp
+satellite_version: 1
+control_plane: ello-repo-control
+authority_plane: search-authority
+initialized_at: '2026-10-06T02:20:36.788972-04:00'
